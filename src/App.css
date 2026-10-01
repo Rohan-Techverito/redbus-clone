@@ -70,10 +70,29 @@ button { font: inherit; cursor: pointer; }
 }
 .search-row { display: flex; gap: 10px; width: 100%; flex-wrap: wrap; }
 .search-fields { flex: 1 1 640px; min-width: 0; display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 16px; }
-.field { display: flex; align-items: center; gap: 14px; padding: 0 20px; min-height: 74px; flex: 1 1 160px; min-width: 0; border-right: 1px solid var(--line); }
+.field { display: flex; align-items: center; gap: 14px; padding: 0 20px; min-height: 74px; flex: 1 1 160px; min-width: 0; border-right: 1px solid var(--line); position: relative; }
 .field:last-child { border-right: 0; }
 .field input { border: 0; outline: 0; font: inherit; font-size: 18px; width: 100%; background: transparent; }
 .field-icon { font-size: 20px; }
+.city-field { align-items: flex-start; padding-top: 16px; padding-bottom: 16px; }
+.city-field .field-icon { margin-top: 2px; }
+.city-autocomplete { position: relative; width: 100%; }
+.city-autocomplete input { border: 0; outline: 0; font: inherit; font-size: 18px; width: 100%; background: transparent; }
+.city-suggestions {
+  position: absolute; top: calc(100% + 8px); left: -20px; right: -20px; z-index: 10;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; margin: 0; padding: 6px 0;
+  list-style: none; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); max-height: 260px; overflow-y: auto;
+}
+.city-suggestion { display: flex; justify-content: space-between; gap: 10px; padding: 10px 20px; cursor: pointer; font-size: 15px; }
+.city-suggestion.highlighted, .city-suggestion:hover { background: var(--red-soft); }
+.city-suggestion-name { font-weight: 600; }
+.city-suggestion-state { color: var(--muted); font-size: 13px; }
+.field-error { position: absolute; bottom: -20px; left: 0; color: var(--red); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.swap-btn {
+  flex: 0 0 auto; align-self: center; width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--line); background: #fff; font-size: 16px; display: flex;
+  align-items: center; justify-content: center; margin: 0 -18px; z-index: 1; position: relative;
+}
 .date-field { flex: 2 1 360px; gap: 10px; }
 @media (min-width: 1100px) { .search-fields { flex-wrap: nowrap; } .date-field { flex: 0 0 auto; } }
 .date-text { display: grid; grid-template-columns: auto auto; column-gap: 12px; align-items: baseline; margin-right: auto; }

@@ -1,9 +1,53 @@
 import BoardingPointList from '../components/BoardingPointList'
 import Offers from '../components/Offers'
 import SearchCard from '../components/SearchCard'
-import { boardingPoints, cities } from '../data'
+import { getBoardingPoints, getCities } from '../api/client'
+import { useAsync } from '../hooks/useAsync'
 
 function HomePage() {
+  const citiesAsync = useAsync(() => getCities(), [])
+  const boardingPointsAsync = useAsync(() => getBoardingPoints(), [])
+
+  const renderSkeleton = () => (
+    <ul className="bp-grid" aria-busy="true">
+      {[1, 2, 3].map((n) => (
+        <li key={n} className="bp-card skeleton-card">
+          <span className="skeleton" />
+        </li>
+      ))}
+    </ul>
+  )
+
+  const renderBoardingPointsSection = () => {
+    if (citiesAsync.status === 'error') {
+      return (
+        <div className="section-error">
+          <p>We couldn't load the boarding points.</p>
+          <button type="button" onClick={citiesAsync.retry}>Retry</button>
+        </div>
+      )
+    }
+
+    if (citiesAsync.status !== 'success') {
+      return renderSkeleton()
+    }
+
+    if (boardingPointsAsync.status === 'error') {
+      return (
+        <div className="section-error">
+          <p>We couldn't load the boarding points.</p>
+          <button type="button" onClick={boardingPointsAsync.retry}>Retry</button>
+        </div>
+      )
+    }
+
+    if (boardingPointsAsync.status !== 'success') {
+      return renderSkeleton()
+    }
+
+    return <BoardingPointList cities={citiesAsync.data!} boardingPoints={boardingPointsAsync.data!} />
+  }
+
   return (
     <>
       <section className="hero">
@@ -30,7 +74,7 @@ function HomePage() {
           <div className="section-head">
             <h2>Boarding Points</h2>
           </div>
-          <BoardingPointList cities={cities} boardingPoints={boardingPoints} />
+          {renderBoardingPointsSection()}
         </section>
       </main>
     </>

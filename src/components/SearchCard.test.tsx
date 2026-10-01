@@ -1,7 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { HttpResponse, http } from 'msw'
 import SearchCard from './SearchCard'
+import { server } from '../mocks/server'
 
 function selectCity(input: HTMLElement, text: string) {
   fireEvent.change(input, { target: { value: text } })
@@ -20,25 +22,34 @@ function renderSearchCard(initialEntries: string[] = ['/']) {
   )
 }
 
+async function waitForCitiesToLoad() {
+  await waitFor(() => {
+    expect(screen.getByRole('combobox', { name: 'From' })).toHaveAttribute('placeholder', 'From')
+  })
+}
+
 describe('SearchCard', () => {
-  it('selects Pune in the From field and stores its cityId, reflected in the displayed text', () => {
+  it('selects Pune in the From field and stores its cityId, reflected in the displayed text', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     selectCity(fromInput, 'pu')
 
     expect(fromInput).toHaveValue('Pune')
   })
 
-  it('shows distinct errors next to From and To when both are empty on Search', () => {
+  it('shows distinct errors next to From and To when both are empty on Search', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     fireEvent.click(screen.getByRole('button', { name: '⌕ Search buses' }))
 
     expect(screen.getByText('Please select a departure city')).toBeInTheDocument()
     expect(screen.getByText('Please select a destination city')).toBeInTheDocument()
   })
 
-  it('shows an error on both fields when the same city is selected for From and To', () => {
+  it('shows an error on both fields when the same city is selected for From and To', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     const toInput = screen.getByRole('combobox', { name: 'To' })
 
@@ -51,8 +62,9 @@ describe('SearchCard', () => {
     expect(errors).toHaveLength(2)
   })
 
-  it('does not show errors when From and To are different valid cities', () => {
+  it('does not show errors when From and To are different valid cities', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     const toInput = screen.getByRole('combobox', { name: 'To' })
 
@@ -66,8 +78,9 @@ describe('SearchCard', () => {
     expect(screen.queryByText('From and To cities must be different')).not.toBeInTheDocument()
   })
 
-  it('swaps the selected From and To cities when the swap button is clicked', () => {
+  it('swaps the selected From and To cities when the swap button is clicked', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     const toInput = screen.getByRole('combobox', { name: 'To' })
 
@@ -80,8 +93,9 @@ describe('SearchCard', () => {
     expect(toInput).toHaveValue('Pune')
   })
 
-  it('renders a native date input with min set to today and no Today/Tomorrow chips', () => {
+  it('renders a native date input with min set to today and no Today/Tomorrow chips', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const dateInput = screen.getByLabelText('Date of Journey') as HTMLInputElement
     expect(dateInput).toHaveAttribute('type', 'date')
 
@@ -92,8 +106,9 @@ describe('SearchCard', () => {
     expect(screen.queryByRole('button', { name: 'Tomorrow' })).not.toBeInTheDocument()
   })
 
-  it('navigates to /search with from, to, and date query params when searching with valid cities', () => {
+  it('navigates to /search with from, to, and date query params when searching with valid cities', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     const toInput = screen.getByRole('combobox', { name: 'To' })
     const dateInput = screen.getByLabelText('Date of Journey') as HTMLInputElement
@@ -107,19 +122,21 @@ describe('SearchCard', () => {
     expect(screen.getByText('Search results page')).toBeInTheDocument()
   })
 
-  it('pre-fills from, to, and date from the URL on mount', () => {
+  it('pre-fills from, to, and date from the URL on mount', async () => {
     renderSearchCard(['/?from=1&to=2&date=2026-10-02'])
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     const toInput = screen.getByRole('combobox', { name: 'To' })
     const dateInput = screen.getByLabelText('Date of Journey') as HTMLInputElement
 
-    expect(fromInput).toHaveValue('Pune')
+    await waitFor(() => expect(fromInput).toHaveValue('Pune'))
     expect(toInput).toHaveValue('Bengaluru')
     expect(dateInput).toHaveValue('2026-10-02')
   })
 
-  it('leaves From/To blank and date defaulted to today when no query params are present', () => {
+  it('leaves From/To blank and date defaulted to today when no query params are present', async () => {
     renderSearchCard()
+    await waitForCitiesToLoad()
     const fromInput = screen.getByRole('combobox', { name: 'From' })
     const toInput = screen.getByRole('combobox', { name: 'To' })
     const dateInput = screen.getByLabelText('Date of Journey') as HTMLInputElement
@@ -130,5 +147,28 @@ describe('SearchCard', () => {
     expect(fromInput).toHaveValue('')
     expect(toInput).toHaveValue('')
     expect(dateInput).toHaveValue(iso)
+  })
+
+  it('shows a loading indicator before the city list resolves', () => {
+    renderSearchCard()
+    const fromInput = screen.getByRole('combobox', { name: 'From' })
+    expect(fromInput).toHaveAttribute('placeholder', 'Loading cities…')
+  })
+
+  it('shows an error with a retry that recovers when loading cities fails', async () => {
+    server.use(
+      http.get('/api/cities', () => new HttpResponse(null, { status: 500 })),
+    )
+
+    renderSearchCard()
+
+    expect(await screen.findByText("Couldn't load cities.")).toBeInTheDocument()
+
+    server.resetHandlers()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    await waitForCitiesToLoad()
+    expect(screen.queryByText("Couldn't load cities.")).not.toBeInTheDocument()
   })
 })

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import CityAutocomplete from './CityAutocomplete'
-import { cities } from '../data'
+import { getCities } from '../api/client'
+import { useAsync } from '../hooks/useAsync'
 import type { City } from '../types'
 
 const toIsoDate = (d: Date) => {
@@ -12,7 +13,7 @@ const toIsoDate = (d: Date) => {
   return `${year}-${month}-${day}`
 }
 
-const parseCityId = (value: string | null): City['id'] | null => {
+const parseCityId = (value: string | null, cities: City[]): City['id'] | null => {
   if (value === null) return null
   const id = Number(value)
   if (!Number.isInteger(id)) return null
@@ -27,11 +28,23 @@ function SearchCard() {
 
   const [forWomen, setForWomen] = useState(false)
 
-  const [fromCityId, setFromCityId] = useState<City['id'] | null>(() => parseCityId(searchParams.get('from')))
-  const [toCityId, setToCityId] = useState<City['id'] | null>(() => parseCityId(searchParams.get('to')))
+  const citiesAsync = useAsync(() => getCities(), [])
+  const cities = citiesAsync.data ?? []
+
+  const [fromCityId, setFromCityId] = useState<City['id'] | null>(null)
+  const [toCityId, setToCityId] = useState<City['id'] | null>(null)
   const [date, setDate] = useState<string>(() => searchParams.get('date') ?? todayIso)
   const [fromError, setFromError] = useState<string | null>(null)
   const [toError, setToError] = useState<string | null>(null)
+
+  // Once the city list has loaded, resolve any from/to city ids present in
+  // the URL against it (they can't be validated before then).
+  useEffect(() => {
+    if (citiesAsync.status !== 'success' || !citiesAsync.data) return
+    setFromCityId(parseCityId(searchParams.get('from'), citiesAsync.data))
+    setToCityId(parseCityId(searchParams.get('to'), citiesAsync.data))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [citiesAsync.status, citiesAsync.data])
 
   const handleSwap = () => {
     setFromCityId(toCityId)
@@ -67,6 +80,12 @@ function SearchCard() {
 
   return (
     <div className="search-card">
+      {citiesAsync.status === 'error' && (
+        <div className="city-autocomplete-error">
+          <span className="field-error">Couldn't load cities.</span>
+          <button type="button" onClick={citiesAsync.retry}>Retry</button>
+        </div>
+      )}
       <div className="search-row">
         <div className="search-fields">
           <div className="field city-field">
@@ -77,7 +96,7 @@ function SearchCard() {
               onChange={setFromCityId}
               id="from-city"
               ariaLabel="From"
-              placeholder="From"
+              placeholder={citiesAsync.status === 'loading' ? 'Loading cities…' : 'From'}
               error={fromError ?? undefined}
             />
           </div>
@@ -92,7 +111,7 @@ function SearchCard() {
               onChange={setToCityId}
               id="to-city"
               ariaLabel="To"
-              placeholder="To"
+              placeholder={citiesAsync.status === 'loading' ? 'Loading cities…' : 'To'}
               error={toError ?? undefined}
             />
           </div>

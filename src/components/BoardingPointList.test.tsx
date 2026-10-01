@@ -21,4 +21,14 @@ describe('BoardingPointList', () => {
     render(<BoardingPointList cities={cities} boardingPoints={boardingPoints} />)
     expect(screen.getByRole('listitem')).toHaveTextContent('(Pune, Maharashtra)')
   })
+
+  it('shows "Unknown city" for a boarding point whose cityId has no matching city', () => {
+    const boardingPointsWithUnknownCity: BoardingPoint[] = [
+      { id: 2, name: 'Unknown Stop', address: 'Nowhere Road', landmark: 'Near nothing', cityId: 99 },
+    ]
+    render(<BoardingPointList cities={cities} boardingPoints={boardingPointsWithUnknownCity} />)
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveTextContent('Unknown Stop')
+    expect(item).toHaveTextContent('Unknown city')
+  })
 })

@@ -95,12 +95,9 @@ button { font: inherit; cursor: pointer; }
 }
 .date-field { flex: 2 1 360px; gap: 10px; }
 @media (min-width: 1100px) { .search-fields { flex-wrap: nowrap; } .date-field { flex: 0 0 auto; } }
-.date-text { display: grid; grid-template-columns: auto auto; column-gap: 12px; align-items: baseline; margin-right: auto; }
-.date-text small { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
-.date-text strong { font-size: 18px; }
-.date-text em { font-style: normal; font-size: 12px; color: var(--muted); }
-.chip { border: 0; border-radius: 999px; padding: 10px 14px; background: var(--red-soft); font-weight: 700; font-size: 16px; }
-.chip-active { background: #f6c9cb; }
+.date-text { display: flex; flex-direction: column; gap: 6px; margin-right: auto; width: 100%; }
+.date-text small { color: var(--muted); font-size: 13px; }
+.date-input { border: 0; outline: 0; font: inherit; font-size: 18px; font-weight: 700; background: transparent; padding: 0; width: 100%; }
 .women-box {
   flex: 0 0 300px; display: flex; align-items: center; gap: 14px; padding: 12px 16px;
   border: 1px solid var(--line); border-radius: 16px; font-size: 18px;
@@ -147,6 +144,14 @@ button { font: inherit; cursor: pointer; }
 /* Boarding points */
 .bp-grid { list-style: none; padding: 0; margin: 24px 0 64px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .bp-card { border: 1px solid var(--line); border-radius: 16px; padding: 18px; line-height: 1.5; }
+
+/* Search results */
+.results-empty, .results-error {
+  margin: 24px 0 64px; padding: 32px; border-radius: 16px; text-align: center;
+}
+.results-empty { border: 1px dashed var(--line); color: var(--muted); }
+.results-error { border: 1px solid var(--red); background: var(--red-soft); color: var(--ink); }
+.results-error h2 { margin: 0 0 8px; font-size: 20px; color: var(--red); }
 
 .date-text strong, .women-box > div { white-space: nowrap; }
 

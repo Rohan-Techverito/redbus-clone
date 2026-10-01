@@ -11,3 +11,9 @@ export interface BoardingPoint {
   landmark: string
   cityId: City['id']
 }
+
+export interface Route {
+  id: number
+  fromCityId: City['id']
+  toCityId: City['id']
+}

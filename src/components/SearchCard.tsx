@@ -1,27 +1,45 @@
 import { useState } from 'react'
+import type { ChangeEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import CityAutocomplete from './CityAutocomplete'
 import { cities } from '../data'
 import type { City } from '../types'
 
-const formatDate = (d: Date) =>
-  `${String(d.getDate()).padStart(2, '0')} ${d.toLocaleString('en-US', { month: 'short' })}, ${d.getFullYear()}`
+const toIsoDate = (d: Date) => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parseCityId = (value: string | null): City['id'] | null => {
+  if (value === null) return null
+  const id = Number(value)
+  if (!Number.isInteger(id)) return null
+  return cities.some((c) => c.id === id) ? id : null
+}
 
 function SearchCard() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [today] = useState(() => new Date())
-  const [dayOffset, setDayOffset] = useState(0)
+  const todayIso = toIsoDate(today)
+
   const [forWomen, setForWomen] = useState(false)
 
-  const [fromCityId, setFromCityId] = useState<City['id'] | null>(null)
-  const [toCityId, setToCityId] = useState<City['id'] | null>(null)
+  const [fromCityId, setFromCityId] = useState<City['id'] | null>(() => parseCityId(searchParams.get('from')))
+  const [toCityId, setToCityId] = useState<City['id'] | null>(() => parseCityId(searchParams.get('to')))
+  const [date, setDate] = useState<string>(() => searchParams.get('date') ?? todayIso)
   const [fromError, setFromError] = useState<string | null>(null)
   const [toError, setToError] = useState<string | null>(null)
-
-  const date = new Date(today)
-  date.setDate(today.getDate() + dayOffset)
 
   const handleSwap = () => {
     setFromCityId(toCityId)
     setToCityId(fromCityId)
+  }
+
+  const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setDate(e.target.value)
   }
 
   const handleSearch = () => {
@@ -41,6 +59,10 @@ function SearchCard() {
 
     setFromError(nextFromError)
     setToError(nextToError)
+
+    if (!nextFromError && !nextToError && fromCityId !== null && toCityId !== null) {
+      navigate(`/search?from=${fromCityId}&to=${toCityId}&date=${date}`)
+    }
   }
 
   return (
@@ -78,15 +100,15 @@ function SearchCard() {
             <span className="field-icon">📅</span>
             <div className="date-text">
               <small>Date of Journey</small>
-              <strong>{formatDate(date)}</strong>
-              <em>{dayOffset === 0 ? '(Today)' : '(Tomorrow)'}</em>
+              <input
+                type="date"
+                className="date-input"
+                aria-label="Date of Journey"
+                min={todayIso}
+                value={date}
+                onChange={handleDateChange}
+              />
             </div>
-            <button type="button" className={`chip ${dayOffset === 0 ? 'chip-active' : ''}`} onClick={() => setDayOffset(0)}>
-              Today
-            </button>
-            <button type="button" className={`chip ${dayOffset === 1 ? 'chip-active' : ''}`} onClick={() => setDayOffset(1)}>
-              Tomorrow
-            </button>
           </div>
         </div>
         <div className="women-box">
